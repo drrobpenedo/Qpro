@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Quantum-Inspired AI Demo – Nexus Digital Technologies</title>
+<style>
+  :root{
+    --bg:#0f1222; --panel:#24294f; --card:#171a2e; --text:#e9ecff;
+    --accent:#8fd3fe; --accent2:#a78bfa; --green:#8ef0b5; --orange:#ffb38a; --line:#444;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);text-align:center}
+  header{padding:20px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0f1222}
+  h1{margin:0}
+  #wrap{max-width:880px;margin:0 auto;padding:24px}
+  #networkCanvas{display:block;margin:0 auto;border:1px solid var(--line);background:var(--card)}
+  .legend,.metrics{margin:18px auto;padding:14px;background:var(--panel);border-radius:10px;width:320px;text-align:left}
+  .legend span{display:inline-block;width:12px;height:12px;margin-right:8px;border-radius:50%}
+  .greenDot{background:var(--green)}
+  .orangeDot{background:var(--orange)}
+  .controls{margin:14px 0}
+  button{margin:6px;padding:10px 18px;border:0;border-radius:8px;background:var(--accent);color:#0f1222;font-weight:700;cursor:pointer}
+  button:hover{background:var(--accent2);color:#fff}
+  .footer{margin:18px 0 28px;color:#aab}
+  /* Tooltip */
+  #tooltip{
+    position:absolute; pointer-events:none; display:none;
+    background:#0b0e22; color:var(--text); border:1px solid var(--line);
+    padding:8px 10px; border-radius:8px; font-size:12px; box-shadow:0 6px 16px rgba(0,0,0,.35);
+    max-width:260px; text-align:left; z-index:10;
+  }
+  #tooltip .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+</style>
+</head>
+<body>
+  <header>
+    <h1>Quantum-Inspired AI for IoT Optimization</h1>
+    <h3>NSF SBIR Phase I Demo – Nexus Digital Technologies</h3>
+  </header>
+
+  <div id="wrap">
+    <canvas id="networkCanvas" width="760" height="480"></canvas>
+
+    <div class="legend">
+      <h3>Legend</h3>
+      <p><span class="greenDot"></span> Green = optimized / active / efficient node</p>
+      <p><span class="orangeDot"></span> Orange = non-optimized / inefficient node</p>
+    </div>
+
+    <div class="controls">
+      <button onclick="runClassical()">Run Classical AI</button>
+      <button onclick="runQuantum()">Run Quantum-Inspired AI</button>
+      <button onclick="resetNetwork()">Reset</button>
+    </div>
+
+    <div class="metrics" id="metrics">
+      <h3>Performance Metrics</h3>
+      <p>Latency: –</p>
+      <p>Energy Use: –</p>
+      <p>Anomaly Detection Accuracy: –</p>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 Transunicorn LLC DBA Nexus Digital Technologies</div>
+
+  <!-- Hover tooltip -->
+  <div id="tooltip"></div>
+
+<script>
+const canvas = document.getElementById("networkCanvas");
+const ctx = canvas.getContext("2d");
+const metricsDiv = document.getElementById("metrics");
+const tooltip = document.getElementById("tooltip");
+
+let nodes = [];
+let edges = [];
+const NODE_R = 7;
+
+function rand(min, max){ return Math.random()*(max-min)+min; }
+
+function createNetwork(numNodes=26){
+  nodes = [];
+  edges = [];
+  for(let i=0;i<numNodes;i++){
+    nodes.push({
+      x: rand(40, canvas.width-40),
+      y: rand(40, canvas.height-40),
+      active:false,
+      latency:null,       // ms
+      energy:null,        // 0..100 (lower is better)
+      accuracy:null       // %
+    });
+  }
+  // sparse random graph
+  for(let i=0;i<numNodes;i++){
+    for(let j=i+1;j<numNodes;j++){
+      if(Math.random()<0.08){ edges.push([i,j]); }
+    }
+  }
+  drawNetwork();
+  updateMetrics("–","–","–");
+}
+
+function drawNetwork(){
+  ctx.fillStyle = "#171a2e";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  // edges
+  ctx.strokeStyle = "#444";
+  ctx.lineWidth = 1;
+  edges.forEach(([i,j])=>{
+    ctx.beginPath();
+    ctx.moveTo(nodes[i].x, nodes[i].y);
+    ctx.lineTo(nodes[j].x, nodes[j].y);
+    ctx.stroke();
+  });
+  // nodes
+  nodes.forEach(n=>{
+    ctx.beginPath();
+    ctx.arc(n.x,n.y,NODE_R,0,Math.PI*2);
+    ctx.fillStyle = n.active ? "#8ef0b5" : "#ffb38a";
+    ctx.fill();
+  });
+}
+
+function assignMetrics(mode){
+  // Mode "classical" or "quantum" – create per-node metrics distributions
+  nodes.forEach(n=>{
+    if(mode==="classical"){
+      n.active = Math.random() < 0.30;         // many stuck
+      n.latency = n.active ? rand(10,15) : rand(18,32);
+      n.energy  = n.active ? rand(58,70) : rand(72,88);  // higher is worse
+      n.accuracy= n.active ? rand(0.84,0.89) : rand(0.70,0.82);
+    }else{
+      n.active = Math.random() < 0.70;         // more optimized
+      n.latency = n.active ? rand(3.5,6.5) : rand(8,14);
+      n.energy  = n.active ? rand(28,42) : rand(48,62);
+      n.accuracy= n.active ? rand(0.95,0.985) : rand(0.88,0.94);
+    }
+  });
+}
+
+function summarize(){
+  // network-wide summary for metrics panel
+  const L = average(nodes.map(n=>n.latency));
+  const E = average(nodes.map(n=>n.energy));
+  const A = average(nodes.map(n=>n.accuracy))*100;
+  return {latency: `${L.toFixed(1)} ms`,
+          energy: E < 50 ? "Low" : (E<65? "Medium":"High"),
+          acc: `${A.toFixed(1)}%`};
+}
+function average(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+
+function runClassical(){
+  assignMetrics("classical");
+  drawNetwork();
+  const s = summarize();
+  updateMetrics(s.latency, s.energy, s.acc);
+}
+function runQuantum(){
+  assignMetrics("quantum");
+  drawNetwork();
+  const s = summarize();
+  updateMetrics(s.latency, s.energy, s.acc);
+}
+function resetNetwork(){
+  createNetwork();
+}
+
+function updateMetrics(lat, energy, acc){
+  metricsDiv.innerHTML = `
+    <h3>Performance Metrics</h3>
+    <p>Latency: ${lat}</p>
+    <p>Energy Use: ${energy}</p>
+    <p>Anomaly Detection Accuracy: ${acc}</p>
+  `;
+}
+
+// ---- Tooltip logic ----
+canvas.addEventListener("mousemove", e=>{
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  // find nearest node within radius
+  let hovered = null;
+  for(const n of nodes){
+    const d2 = (n.x-mx)**2 + (n.y-my)**2;
+    if(d2 <= (NODE_R+4)**2){ hovered = n; break; }
+  }
+
+  if(hovered){
+    const color = hovered.active ? "#8ef0b5" : "#ffb38a";
+    const status = hovered.active ? "Optimized / Efficient" : "Not Optimized / Inefficient";
+    const lat = hovered.latency ? `${hovered.latency.toFixed(1)} ms` : "—";
+    const eng = hovered.energy  ? `${hovered.energy.toFixed(0)} (lower=better)` : "—";
+    const acc = hovered.accuracy? `${(hovered.accuracy*100).toFixed(1)}%` : "—";
+
+    tooltip.innerHTML = `
+      <div><span class="dot" style="background:${color}"></span><b>${status}</b></div>
+      <div>Latency: ${lat}</div>
+      <div>Energy Score: ${eng}</div>
+      <div>Anomaly Accuracy: ${acc}</div>
+      <div style="opacity:.7;margin-top:4px">Tip: Click “Run Quantum-Inspired AI” to improve nodes.</div>
+    `;
+    tooltip.style.display = "block";
+    tooltip.style.left = (e.pageX + 14) + "px";
+    tooltip.style.top  = (e.pageY + 14) + "px";
+  }else{
+    tooltip.style.display = "none";
+  }
+});
+
+canvas.addEventListener("mouseleave", ()=> tooltip.style.display="none");
+
+// init
+createNetwork();
+</script>
+</body>
+</html>
